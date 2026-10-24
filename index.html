@@ -14,7 +14,10 @@
   .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
   label { display:block; font-size: 14px; color: var(--suave); margin: 10px 0 6px; }
   label:first-child { margin-top: 0; }
-  select, input { width: 100%; font-size: 17px; padding: 12px; border-radius: 10px; border: 1px solid var(--borde); background: var(--fondo); color: var(--texto); }
+  select, input { display: block; width: 100%; max-width: 100%; min-width: 0; font-size: 17px; padding: 12px; border-radius: 10px; border: 1px solid var(--borde); background: var(--fondo); color: var(--texto); }
+  /* iPhone: el campo de hora tiene un ancho propio que se sale de la tarjeta */
+  input[type="time"] { -webkit-appearance: none; appearance: none; min-height: 48px; line-height: 1.2; text-align: left; }
+  input[type="time"]::-webkit-date-and-time-value { text-align: left; }
   .dos { display:flex; gap: 8px; } .dos button { flex:1; }
   button { font-size: 17px; padding: 13px; border-radius: 10px; border: 1px solid var(--borde); background: var(--fondo); color: var(--texto); }
   button.elegido { background: var(--texto); color: var(--tarjeta); border-color: var(--texto); }
@@ -66,7 +69,6 @@
       <canvas id="lienzo" class="oculto"></canvas>
       <div class="dos" style="margin-top:8px">
         <button type="button" id="sacar" class="oculto">📸 Sacar foto</button>
-        <button type="button" id="girar" class="oculto">🔄 Girar</button>
         <button type="button" id="repetir" class="oculto">Repetir</button>
       </div>
       <button type="button" id="reintentarCamara" class="oculto" style="width:100%;margin-top:8px">Volver a intentar con la cámara</button>
@@ -94,7 +96,7 @@
 // Si la página se abre desde GitHub, ENDPOINT es la dirección del robot. Servida por Google, queda vacía.
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbywEJS0cCgtoggcsz6Q-2tGyPigOwQsc3p2vloK8kp8huBb1eq2_mMrFrxXBqkQFXO0/exec';
 const $ = (id) => document.getElementById(id);
-const estado = { reemplazo: '', foto: '', lat: '', lng: '', precision: '', camara: 'user', stream: null };
+const estado = { reemplazo: '', foto: '', lat: '', lng: '', precision: '', stream: null };
 
 function guardar(clave, valor) { try { localStorage.setItem(clave, valor); } catch (e) {} }
 function leer(clave) { try { return localStorage.getItem(clave); } catch (e) { return null; } }
@@ -135,9 +137,9 @@ function abrirCamara() {
   if (estado.stream) estado.stream.getTracks().forEach((t) => t.stop());
   $('reintentarCamara').classList.add('oculto');
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return sinCamara();
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: estado.camara, width: { ideal: 1280 } }, audio: false })
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 } }, audio: false })   // solo cámara de selfie
     .then((s) => { estado.stream = s; $('video').srcObject = s; $('video').classList.remove('oculto'); $('vista').classList.add('oculto');
-      $('sacar').classList.remove('oculto'); $('girar').classList.remove('oculto'); $('repetir').classList.add('oculto');
+      $('sacar').classList.remove('oculto'); $('repetir').classList.add('oculto');
       $('estadoCamara').textContent = 'Encuadrá tu cara con el gimnasio de fondo y tocá “Sacar foto”.'; $('estadoCamara').className = 'estado'; })
     .catch(() => sinCamara());
 }
@@ -158,14 +160,13 @@ function comprimir(fuente, ancho, alto) {
 
 function fotoLista(dataUrl) {
   estado.foto = dataUrl; $('vista').src = dataUrl; $('vista').classList.remove('oculto'); $('video').classList.add('oculto');
-  $('sacar').classList.add('oculto'); $('girar').classList.add('oculto'); $('repetir').classList.remove('oculto');
+  $('sacar').classList.add('oculto'); $('repetir').classList.remove('oculto');
   $('estadoCamara').textContent = 'Foto lista ✓'; $('estadoCamara').className = 'estado ok';
   if (estado.stream) { estado.stream.getTracks().forEach((t) => t.stop()); estado.stream = null; }
   revisar();
 }
 
 $('sacar').onclick = () => { const v = $('video'); fotoLista(comprimir(v, v.videoWidth, v.videoHeight)); };
-$('girar').onclick = () => { estado.camara = estado.camara === 'user' ? 'environment' : 'user'; abrirCamara(); };
 $('repetir').onclick = () => { estado.foto = ''; revisar(); abrirCamara(); };
 
 // ---- Ubicación
